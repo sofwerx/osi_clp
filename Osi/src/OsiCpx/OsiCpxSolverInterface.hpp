@@ -751,12 +751,6 @@ public:
 
 protected:
   
-  /// Get LP Pointer for const methods
-  CPXLPptr getMutableLpPtr() const;
-
-  /// Get Environment Pointer for const methods
-  CPXENVptr getMutableEnvironmentPtr() const;
-
   /**@name Protected methods */
   //@{
   /// Apply a row cut. Return true if cut was applied.
@@ -781,7 +775,10 @@ private:
   
   /**@name Private methods */
   //@{
-    
+  
+  /// Get LP Pointer for const methods
+  CPXLPptr getMutableLpPtr() const;
+  
   /// The real work of a copy constructor (used by copy and assignment)
   void gutsOfCopy( const OsiCpxSolverInterface & source );
   

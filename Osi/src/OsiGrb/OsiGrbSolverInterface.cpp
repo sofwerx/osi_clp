@@ -9,7 +9,7 @@
 // Copyright (C) 2009 Humboldt University Berlin and others.
 // All Rights Reserved.
 
-// $Id: OsiGrbSolverInterface.cpp 1957 2014-01-17 13:56:40Z stefan $
+// $Id$
 
 #include <iostream>
 #include <cassert>

@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2002, Tobias Pfender, International Business Machines
 // Corporation and others.  All Rights Reserved.
-// Last edit: $Id: OsiSpxSolverInterface.hpp 2019 2015-06-11 08:50:04Z stefan $
+// Last edit: $Id$
 
 #ifndef OsiSpxSolverInterface_H
 #define OsiSpxSolverInterface_H
@@ -26,7 +26,6 @@
 namespace soplex {
   class DIdxSet;
   class DVector;
-  class SPxOut;
   class SoPlex;
 }
 #endif
@@ -613,7 +612,42 @@ public:
   /// Destructor 
   virtual ~OsiSpxSolverInterface();
   //@}
+  
+protected:
+  
+  /**@name Protected methods */
+  //@{
+  /// Apply a row cut. Return true if cut was applied.
+  virtual void applyRowCut( const OsiRowCut & rc );
+  
+  /** Apply a column cut (bound adjustment). 
+      Return true if cut was applied.
+  */
+  virtual void applyColCut( const OsiColCut & cc );
+  //@}
 
+  /**@name Protected member data */
+  //@{
+  /// SoPlex solver object
+  soplex::SoPlex *soplex_;
+  //@}
+
+  
+private:
+  /**@name Private methods */
+  //@{
+  
+  /// free cached column rim vectors
+  void freeCachedColRim();
+
+  /// free cached row rim vectors
+  void freeCachedRowRim();
+
+  /// free cached result vectors
+  void freeCachedResults();
+  
+  /// free cached matrices
+  void freeCachedMatrix();
 
   enum keepCachedFlag
   {
@@ -640,47 +674,6 @@ public:
     /// free only cached LP solution information
     FREECACHED_RESULTS = KEEPCACHED_ALL & ~KEEPCACHED_RESULTS
   };
-  soplex::SoPlex* getLpPtr( int keepCached = KEEPCACHED_NONE );
-
-  soplex::SPxOut* getSPxOut() { return spxout_; }
-  
-protected:
-  
-  /**@name Protected methods */
-  //@{
-  /// Apply a row cut. Return true if cut was applied.
-  virtual void applyRowCut( const OsiRowCut & rc );
-  
-  /** Apply a column cut (bound adjustment). 
-      Return true if cut was applied.
-  */
-  virtual void applyColCut( const OsiColCut & cc );
-  //@}
-
-  /**@name Protected member data */
-  //@{
-  /// SoPlex output object
-  soplex::SPxOut *spxout_;
-  /// SoPlex solver object
-  soplex::SoPlex *soplex_;
-  //@}
-
-  
-private:
-  /**@name Private methods */
-  //@{
-  
-  /// free cached column rim vectors
-  void freeCachedColRim();
-
-  /// free cached row rim vectors
-  void freeCachedRowRim();
-
-  /// free cached result vectors
-  void freeCachedResults();
-  
-  /// free cached matrices
-  void freeCachedMatrix();
 
   /// free all cached data (except specified entries, see getLpPtr())
   void freeCachedData( int keepCached = KEEPCACHED_NONE );

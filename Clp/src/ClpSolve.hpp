@@ -1,4 +1,4 @@
-/* $Id: ClpSolve.hpp 2078 2015-01-05 12:39:49Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -29,8 +29,6 @@ public:
           useBarrier,
           useBarrierNoCross,
           automatic,
-	  tryDantzigWolfe,
-	  tryBenders,
           notImplemented
      };
      enum PresolveType {
@@ -99,8 +97,8 @@ public:
                       32 - Use KKT
          5 - for presolve
                       1 - switch off dual stuff
-         6 - extra switches
-                      
+         6 - for detailed printout (initially just presolve)
+                      1 - presolve statistics
      */
      void setSpecialOption(int which, int value, int extraInfo = -1);
      int getSpecialOption(int which) const;
@@ -203,11 +201,11 @@ public:
      }
      /// Whether we want to kill small substitutions
      inline bool doKillSmall() const {
-          return (independentOptions_[1] & 8192) == 0;
+          return (independentOptions_[1] & 1024) == 0;
      }
      inline void setDoKillSmall(bool doKill) {
-          if (doKill) independentOptions_[1]  &= ~8192;
-          else independentOptions_[1] |= 8192;
+          if (doKill) independentOptions_[1]  &= ~1024;
+          else independentOptions_[1] |= 1024;
      }
      /// Set whole group
      inline int presolveActions() const {
@@ -222,12 +220,6 @@ public:
      }
      inline void setSubstitution(int value) {
           independentOptions_[2] = value;
-     }
-     inline void setIndependentOption(int type,int value) {
-          independentOptions_[type]  = value;
-     }
-     inline int independentOption(int type) const {
-          return independentOptions_[type];
      }
      //@}
 
@@ -251,7 +243,6 @@ private:
          0 - if set return from clpsolve if infeasible
          1 - To be copied over to presolve options
          2 - max substitution level
-	 If Dantzig Wolfe/benders 0 is number blocks, 2 is #passes (notional)
      */
      int independentOptions_[3];
      //@}
@@ -302,8 +293,6 @@ public:
      void setInfeasibility(double value);
      /// Returns real primal infeasibility (if -1) - current if (0)
      double lastInfeasibility(int back = 1) const;
-     /// Returns number of primal infeasibilities (if -1) - current if (0)
-     int numberInfeasibilities(int back = 1) const;
      /// Modify objective e.g. if dual infeasible in dual
      void modifyObjective(double value);
      /// Returns previous iteration number (if -1) - current if (0)

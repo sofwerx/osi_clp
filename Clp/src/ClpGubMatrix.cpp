@@ -1,4 +1,4 @@
-/* $Id: ClpGubMatrix.cpp 1929 2013-04-06 15:30:55Z stefan $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).

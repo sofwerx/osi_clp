@@ -1,4 +1,4 @@
-/* $Id: CoinFactorization2.cpp 1854 2015-12-18 14:18:54Z forrest $ */
+/* $Id: CoinFactorization2.cpp 1416 2011-04-17 09:57:29Z stefan $ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -17,7 +17,7 @@
 #include "CoinIndexedVector.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinFinite.hpp"
-#if COIN_FACTORIZATION_DENSE_CODE==1
+#if DENSE_CODE==1
 // using simple lapack interface
 extern "C" 
 {
@@ -25,13 +25,6 @@ extern "C"
   void F77_FUNC(dgetrf,DGETRF)(ipfint * m, ipfint *n,
                                double *A, ipfint *ldA,
                                ipfint * ipiv, ipfint *info);
-}
-#elif COIN_FACTORIZATION_DENSE_CODE==2
-// C interface
-enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
-extern "C" 
-{
-int clapack_dgetrf ( const enum CBLAS_ORDER Order, const int M, const int N, double *A, const int lda, int *ipiv );
 }
 #endif
 #ifndef NDEBUG
@@ -76,7 +69,7 @@ CoinFactorization::factorSparseSmall (  )
   counter1++;
 #endif
   // when to go dense
-  int denseThreshold=abs(denseThreshold_);
+  int denseThreshold=denseThreshold_;
 
   CoinZeroN ( workArea, numberRows_ );
   //get space for bit work area
@@ -439,31 +432,15 @@ CoinFactorization::factorSparseSmall (  )
         //if (leftRows==100)
         //printf("at 100 %d elements\n",totalElements_);
         double ratio;
-#define COIN_DENSE_MULTIPLIER 1
-        if (leftRows>2000) {
+        if (leftRows>2000)
           ratio=4.0;
-#if COIN_DENSE_MULTIPLIER == 1
-	  ratio =3.5;
-#endif
-        } else if (leftRows>800) {
+        else if (leftRows>800)
           ratio=3.0;
-#if COIN_DENSE_MULTIPLIER == 1
-	  ratio =2.75;
-#endif
-        } else if (leftRows>256) {
+        else if (leftRows>256)
           ratio=2.0;
-        } else {
+        else
           ratio=1.5;
-	}
-#if COIN_DENSE_MULTIPLIER>10
-	ratio=10000;
-#endif
-	//ratio *= 2.0;
-        if ((ratio*leftElements>full&&leftRows>denseThreshold)) {
-#define COIN_ALIGN_DENSE 2
-#if COIN_ALIGN_DENSE == 2
-	  if ((leftRows&7)==0) {
-#endif
+        if ((ratio*leftElements>full&&leftRows>denseThreshold_)) {
           //return to do dense
           if (status!=0)
             break;
@@ -472,7 +449,7 @@ CoinFactorization::factorSparseSmall (  )
             if (numberInColumn[iColumn]) 
               check++;
           }
-          if (check!=leftRows&&denseThreshold) {
+          if (check!=leftRows&&denseThreshold_) {
             //printf("** mismatch %d columns left, %d rows\n",check,leftRows);
             denseThreshold=0;
           } else {
@@ -480,13 +457,10 @@ CoinFactorization::factorSparseSmall (  )
             if ((messageLevel_&4)!=0) 
               std::cout<<"      Went dense at "<<leftRows<<" rows "<<
                 totalElements_<<" "<<full<<" "<<leftElements<<std::endl;
-            //if (!denseThreshold_)
-	    //denseThreshold_=-check; // say how many
+            if (!denseThreshold_)
+              denseThreshold_=-check; // say how many
             break;
           }
-#if COIN_ALIGN_DENSE == 2
-	}
-#endif
         }
       }
       // start at 1 again
@@ -511,30 +485,13 @@ int CoinFactorization::factorDense()
     abort();
   } 
   CoinBigIndex full;
-  if (denseThreshold_>0||true) 
+  if (denseThreshold_>0) 
     full = numberDense_*numberDense_;
   else
     full = - denseThreshold_*numberDense_;
   totalElements_=full;
-#ifdef COIN_ALIGN_DENSE
-  CoinBigIndex newSize=full+8*numberDense_;
-  newSize += (numberDense_+1)/(sizeof(CoinFactorizationDouble)/sizeof(int));
-  newSize += 2*((numberDense_+3)/(sizeof(CoinFactorizationDouble)/sizeof(short)));
-  newSize += ((numberRows_+3)/(sizeof(CoinFactorizationDouble)/sizeof(short)));
-  // so we can align on 256 byte
-  newSize+=32;
-  denseArea_ = new double[newSize];
-  denseAreaAddress_=denseArea_;
-  CoinInt64 xx = reinterpret_cast<CoinInt64>(denseAreaAddress_);
-  int iBottom = static_cast<int>(xx & 63);
-  int offset = (256-iBottom)>>3;
-  denseAreaAddress_ += offset;
-  CoinZeroN(denseArea_,newSize);
-#else
   denseArea_= new double [full];
-  denseAreaAddress_ = denseArea_;
   CoinZeroN(denseArea_,full);
-#endif
   densePermute_= new int [numberDense_];
   int * indexRowU = indexRowU_.array();
   //mark row lookup using lastRow
@@ -564,7 +521,7 @@ int CoinFactorization::factorDense()
   int * indexRowL = indexRowL_.array();
   CoinBigIndex endL=startColumnL[numberGoodL_];
   //take out of U
-  double * column = denseAreaAddress_;
+  double * column = denseArea_;
   int rowsDone=0;
   int iColumn=0;
   int * pivotColumn = pivotColumn_.array();
@@ -595,29 +552,21 @@ int CoinFactorization::factorDense()
       numberGoodU_++;
     } 
   } 
-#ifdef COIN_FACTORIZATION_DENSE_CODE
-  if (denseThreshold_/*>0*/) {
+#ifdef DENSE_CODE
+  if (denseThreshold_>0) {
     assert(numberGoodU_==numberRows_);
     numberGoodL_=numberRows_;
     //now factorize
-    //dgef(denseAreaAddress_,&numberDense_,&numberDense_,densePermute_);
-#if COIN_FACTORIZATION_DENSE_CODE==1
+    //dgef(denseArea_,&numberDense_,&numberDense_,densePermute_);
     int info;
-    F77_FUNC(dgetrf,DGETRF)(&numberDense_,&numberDense_,denseAreaAddress_,&numberDense_,densePermute_,
+    F77_FUNC(dgetrf,DGETRF)(&numberDense_,&numberDense_,denseArea_,&numberDense_,densePermute_,
 			    &info);
     // need to check size of pivots
-    if(info) {
-      //printf("Dense singular\n");
+    if(info)
       status = -1;
-    }
-#elif COIN_FACTORIZATION_DENSE_CODE==2
-    status=clapack_dgetrf ( CblasColMajor, numberDense_,numberDense_,
-      denseAreaAddress_,numberDense_, densePermute_ );
-#endif
     return status;
   } 
 #endif
-  //abort();
   numberGoodU_ = numberRows_-numberDense_;
   int base = numberGoodU_;
   int iDense;
@@ -663,7 +612,7 @@ int CoinFactorization::factorDense()
     int iRow;
     int jDense;
     int pivotRow=-1;
-    double * element = denseAreaAddress_+iDense*numberDense_;
+    double * element = denseArea_+iDense*numberDense_;
     CoinFactorizationDouble largest = 1.0e-12;
     for (iRow=iDense;iRow<numberDense_;iRow++) {
       if (fabs(element[iRow])>largest) {
@@ -692,7 +641,7 @@ int CoinFactorization::factorDense()
       //printf("pivotMultiplier %g\n",pivotMultiplier);
       pivotRegion[numberGoodU_] = pivotMultiplier;
       // Do L
-      element = denseAreaAddress_+iDense*numberDense_;
+      element = denseArea_+iDense*numberDense_;
       CoinBigIndex l = lengthL_;
       startColumnL[numberGoodL_] = l;	//for luck and first time
       for (iRow=iDense+1;iRow<numberDense_;iRow++) {
@@ -874,7 +823,7 @@ CoinFactorization::saveFactorization (const char * file  ) const
       return 1;
     if (CoinToFile(lastColumn_.array(),maximumColumnsExtra_ + 1 , fp ))
       return 1;
-    if (CoinToFile(denseAreaAddress_ , numberDense_*numberDense_, fp ))
+    if (CoinToFile(denseArea_ , numberDense_*numberDense_, fp ))
       return 1;
     if (CoinToFile(densePermute_ , numberDense_, fp ))
       return 1;
@@ -1024,7 +973,7 @@ CoinFactorization::restoreFactorization (const char * file , bool factorIt )
     if (CoinFromFile(lastColumn,maximumColumnsExtra_ + 1 , fp, newSize )==1)
       return 1;
     assert (newSize==maximumColumnsExtra_+1);
-    if (CoinFromFile(denseAreaAddress_ , numberDense_*numberDense_, fp, newSize )==1)
+    if (CoinFromFile(denseArea_ , numberDense_*numberDense_, fp, newSize )==1)
       return 1;
     assert (newSize==numberDense_*numberDense_);
     if (CoinFromFile(densePermute_ , numberDense_, fp, newSize )==1)
@@ -1059,7 +1008,7 @@ CoinFactorization::factorSparseLarge (  )
   counter1++;
 #endif
   // when to go dense
-  int denseThreshold=abs(denseThreshold_);
+  int denseThreshold=denseThreshold_;
 
   CoinZeroN ( workArea, numberRows_ );
   //get space for bit work area
@@ -1421,28 +1370,15 @@ CoinFactorization::factorSparseLarge (  )
         //if (leftRows==100)
         //printf("at 100 %d elements\n",totalElements_);
         double ratio;
-        if (leftRows>2000) {
+        if (leftRows>2000)
           ratio=4.0;
-#if COIN_DENSE_MULTIPLIER == 1
-	  ratio =3.5;
-#endif
-        } else if (leftRows>800) {
+        else if (leftRows>800)
           ratio=3.0;
-#if COIN_DENSE_MULTIPLIER == 1
-	  ratio =2.75;
-#endif
-        } else if (leftRows>256) {
+        else if (leftRows>256)
           ratio=2.0;
-        } else {
+        else
           ratio=1.5;
-	}
-#if COIN_DENSE_MULTIPLIER>10
-	ratio=10000;
-#endif
-        if ((ratio*leftElements>full&&leftRows>denseThreshold)) {
-#if COIN_ALIGN_DENSE == 2
-	  if ((leftRows&7)==0) {
-#endif
+        if ((ratio*leftElements>full&&leftRows>denseThreshold_)) {
           //return to do dense
           if (status!=0)
             break;
@@ -1456,16 +1392,13 @@ CoinFactorization::factorSparseLarge (  )
             denseThreshold=0;
           } else {
             status=2;
-            if ((messageLevel_&4)!=0&&true) 
+            if ((messageLevel_&4)!=0) 
               std::cout<<"      Went dense at "<<leftRows<<" rows "<<
                 totalElements_<<" "<<full<<" "<<leftElements<<std::endl;
             if (!denseThreshold_)
               denseThreshold_=-check; // say how many
             break;
           }
-#if COIN_ALIGN_DENSE == 2
-	}
-#endif
         }
       }
       // start at 1 again

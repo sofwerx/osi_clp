@@ -1,4 +1,4 @@
-/* $Id: IdiSolve.cpp 2078 2015-01-05 12:39:49Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -124,7 +124,6 @@ Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
      result.infeas = sum1;
      result.objval = objvalue;
      result.weighted = objvalue + weight * sum2;
-     result.dropThis = 0.0;
      result.sumSquared = sum2;
      return result;
 }
@@ -337,24 +336,6 @@ Idiot::IdiSolve(
      for (i = 0; i < DJTEST; i++) {
           djSave[i] = 1.0e30;
      }
-#ifndef OSI_IDIOT
-     int numberColumns = model_->numberColumns();
-     for (int i=0;i<numberColumns;i++) {
-       if (model_->getColumnStatus(i)!=ClpSimplex::isFixed)
-	 statusSave[i] = 0;
-       else 
-	 statusSave[i] = 2;
-     }
-     memset(statusSave+numberColumns,0,ncols-numberColumns);
-     if ((strategy_&131072)==0) {
-       for (int i=0;i<numberColumns;i++) {
-	 if (model_->getColumnStatus(i)==ClpSimplex::isFixed) {
-	   assert (colsol[i]<lower[i]+tolerance||
-		   colsol[i]>upper[i]-tolerance);
-	 }
-       }
-     }
-#else
      for (i = 0; i < ncols; i++) {
           if (upper[i] - lower[i]) {
                statusSave[i] = 0;
@@ -362,7 +343,6 @@ Idiot::IdiSolve(
                statusSave[i] = 1;
           }
      }
-#endif
      // for two pass method
      int start[2];
      int stop[2];

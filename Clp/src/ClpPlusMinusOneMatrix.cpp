@@ -1,4 +1,4 @@
-/* $Id: ClpPlusMinusOneMatrix.cpp 2078 2015-01-05 12:39:49Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -16,22 +16,7 @@
 // at end to get min/max!
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpMessage.hpp"
-#ifdef CLP_PLUS_ONE_MATRIX
-static int oneitcount[13]={0,0,0,0,0,0,0,0,0,0,0,0,0};
-static void oneit(int i)
-{
-  if (!oneitcount[i])
-    printf("Plus ones for call %d\n",i);
-  oneitcount[i]++;
-  oneitcount[12]++;
-  if ((oneitcount[12]%1000)==0) {
-    printf("Plus counts");
-    for (int j=0;j<12;j++)
-      printf(" %d",oneitcount[j]);
-    printf("\n");
-  }
-}
-#endif
+
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -50,9 +35,6 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix ()
      indices_ = NULL;
      numberRows_ = 0;
      numberColumns_ = 0;
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 0;
-#endif
      columnOrdered_ = true;
 }
 
@@ -69,9 +51,6 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const ClpPlusMinusOneMatrix & rhs)
      indices_ = NULL;
      numberRows_ = rhs.numberRows_;
      numberColumns_ = rhs.numberColumns_;
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = rhs.otherFlags_;
-#endif
      columnOrdered_ = rhs.columnOrdered_;
      if (numberColumns_) {
           CoinBigIndex numberElements = rhs.startPositive_[numberColumns_];
@@ -102,9 +81,6 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix(int numberRows, int numberColumns,
      numberRows_ = numberRows;
      numberColumns_ = numberColumns;
      columnOrdered_ = columnOrdered;
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 0;
-#endif
      int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
      int numberElements = startPositive[numberMajor];
      startPositive_ = ClpCopyOfArray(startPositive, numberMajor + 1);
@@ -226,9 +202,6 @@ ClpPlusMinusOneMatrix::operator=(const ClpPlusMinusOneMatrix& rhs)
           numberRows_ = rhs.numberRows_;
           numberColumns_ = rhs.numberColumns_;
           columnOrdered_ = rhs.columnOrdered_;
-#ifdef CLP_PLUS_ONE_MATRIX
-	  otherFlags_ = rhs.otherFlags_;
-#endif
           if (numberColumns_) {
                CoinBigIndex numberElements = rhs.startPositive_[numberColumns_];
                indices_ = new int [ numberElements];
@@ -274,9 +247,6 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
      numberRows_ = 0;
      numberColumns_ = 0;
      columnOrdered_ = rhs.columnOrdered_;
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = rhs.otherFlags_;
-#endif
      if (numberRows <= 0 || numberColumns <= 0) {
           startPositive_ = new CoinBigIndex [1];
           startPositive_[0] = 0;
@@ -456,20 +426,16 @@ ClpPlusMinusOneMatrix::reverseOrderedCopy() const
                          !columnOrdered_,  newIndices, newP, newN);
      return newCopy;
 }
-//static bool doPlusOnes=true;
 //unscaled versions
 void
 ClpPlusMinusOneMatrix::times(double scalar,
-                             const double * COIN_RESTRICT x, double * COIN_RESTRICT y) const
+                             const double * x, double * y) const
 {
      int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
      int i;
      CoinBigIndex j;
      assert (columnOrdered_);
-#ifdef CLP_PLUS_ONE_MATRIX
-     if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
-       for (i = 0; i < numberMajor; i++) {
+     for (i = 0; i < numberMajor; i++) {
           double value = scalar * x[i];
           if (value) {
                for (j = startPositive_[i]; j < startNegative_[i]; j++) {
@@ -481,35 +447,17 @@ ClpPlusMinusOneMatrix::times(double scalar,
                     y[iRow] -= value;
                }
           }
-       }
-#ifdef CLP_PLUS_ONE_MATRIX
-     } else {
-       // plus one
-       oneit(0);
-       for (i = 0; i < numberMajor; i++) {
-          double value = scalar * x[i];
-          if (value) {
-               for (j = startPositive_[i]; j < startPositive_[i+1]; j++) {
-                    int iRow = indices_[j];
-                    y[iRow] += value;
-               }
-          }
-       }
      }
-#endif
 }
 void
 ClpPlusMinusOneMatrix::transposeTimes(double scalar,
-                                      const double * COIN_RESTRICT x, double * COIN_RESTRICT y) const
+                                      const double * x, double * y) const
 {
      int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
      int i;
      CoinBigIndex j = 0;
      assert (columnOrdered_);
-#ifdef CLP_PLUS_ONE_MATRIX
-     if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
-       for (i = 0; i < numberMajor; i++) {
+     for (i = 0; i < numberMajor; i++) {
           double value = 0.0;
           for (; j < startNegative_[i]; j++) {
                int iRow = indices_[j];
@@ -520,25 +468,11 @@ ClpPlusMinusOneMatrix::transposeTimes(double scalar,
                value -= x[iRow];
           }
           y[i] += scalar * value;
-       }
-#ifdef CLP_PLUS_ONE_MATRIX
-     } else {
-       // plus one
-       oneit(1);
-       for (i = 0; i < numberMajor; i++) {
-          double value = 0.0;
-          for (; j < startPositive_[i+1]; j++) {
-               int iRow = indices_[j];
-               value += x[iRow];
-          }
-          y[i] += scalar * value;
-       }
      }
-#endif
 }
 void
 ClpPlusMinusOneMatrix::times(double scalar,
-                             const double * COIN_RESTRICT x, double * COIN_RESTRICT y,
+                             const double * x, double * y,
                              const double * /*rowScale*/,
                              const double * /*columnScale*/) const
 {
@@ -547,7 +481,7 @@ ClpPlusMinusOneMatrix::times(double scalar,
 }
 void
 ClpPlusMinusOneMatrix::transposeTimes( double scalar,
-                                       const double * COIN_RESTRICT x, double * COIN_RESTRICT y,
+                                       const double * x, double * y,
                                        const double * /*rowScale*/,
                                        const double * /*columnScale*/,
                                        double * /*spare*/) const
@@ -565,10 +499,10 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 {
      // we know it is not scaled
      columnArray->clear();
-     double * COIN_RESTRICT pi = rowArray->denseVector();
+     double * pi = rowArray->denseVector();
      int numberNonZero = 0;
-     int * COIN_RESTRICT index = columnArray->getIndices();
-     double * COIN_RESTRICT array = columnArray->denseVector();
+     int * index = columnArray->getIndices();
+     double * array = columnArray->denseVector();
      int numberInRowArray = rowArray->getNumElements();
      // maybe I need one in OsiSimplex
      double zeroTolerance = model->zeroTolerance();
@@ -604,19 +538,16 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
           if (packed) {
                // need to expand pi into y
                assert(y->capacity() >= numberRows);
-               double * COIN_RESTRICT piOld = pi;
+               double * piOld = pi;
                pi = y->denseVector();
-               const int * COIN_RESTRICT whichRow = rowArray->getIndices();
+               const int * whichRow = rowArray->getIndices();
                int i;
                // modify pi so can collapse to one loop
                for (i = 0; i < numberInRowArray; i++) {
                     int iRow = whichRow[i];
                     pi[iRow] = scalar * piOld[i];
                }
-#ifdef CLP_PLUS_ONE_MATRIX
-               if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
-		 for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+               for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
                     double value = 0.0;
                     for (; j < startNegative_[iColumn]; j++) {
                          int iRow = indices_[j];
@@ -630,30 +561,13 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
                          array[numberNonZero] = value;
                          index[numberNonZero++] = iColumn;
                     }
-		 }
-#ifdef CLP_PLUS_ONE_MATRIX
-	       } else {
-		 // plus one
-		 oneit(2);
-		 for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
-                    double value = 0.0;
-                    for (; j < startPositive_[iColumn+1]; j++) {
-                         int iRow = indices_[j];
-                         value += pi[iRow];
-                    }
-                    if (fabs(value) > zeroTolerance) {
-                         array[numberNonZero] = value;
-                         index[numberNonZero++] = iColumn;
-                    }
-		 }
-	       }
-#endif
+               }
                for (i = 0; i < numberInRowArray; i++) {
                     int iRow = whichRow[i];
                     pi[iRow] = 0.0;
                }
           } else {
-         	 for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+               for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
                     double value = 0.0;
                     for (; j < startNegative_[iColumn]; j++) {
                          int iRow = indices_[j];
@@ -668,7 +582,7 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
                          index[numberNonZero++] = iColumn;
                          array[iColumn] = value;
                     }
-		 }
+               }
           }
           columnArray->setNumElements(numberNonZero);
      } else {
@@ -685,96 +599,61 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
           CoinIndexedVector * columnArray) const
 {
      columnArray->clear();
-     double * COIN_RESTRICT pi = rowArray->denseVector();
+     double * pi = rowArray->denseVector();
      int numberNonZero = 0;
-     int * COIN_RESTRICT index = columnArray->getIndices();
-     double * COIN_RESTRICT array = columnArray->denseVector();
+     int * index = columnArray->getIndices();
+     double * array = columnArray->denseVector();
      int numberInRowArray = rowArray->getNumElements();
      // maybe I need one in OsiSimplex
      double zeroTolerance = model->zeroTolerance();
-     const int * COIN_RESTRICT column = indices_;
-     const CoinBigIndex * COIN_RESTRICT startPositive = startPositive_;
-     const CoinBigIndex * COIN_RESTRICT startNegative = startNegative_;
-     const int * COIN_RESTRICT whichRow = rowArray->getIndices();
+     const int * column = indices_;
+     const CoinBigIndex * startPositive = startPositive_;
+     const CoinBigIndex * startNegative = startNegative_;
+     const int * whichRow = rowArray->getIndices();
      bool packed = rowArray->packedMode();
      if (numberInRowArray > 2) {
           // do by rows
           int iRow;
-          double * COIN_RESTRICT markVector = y->denseVector(); // probably empty .. but
+          double * markVector = y->denseVector(); // probably empty .. but
           int numberOriginal = 0;
           int i;
           if (packed) {
-	       int numberCovered=0;
-	       int numberColumns = getNumCols();
-	       bool sparse=true;
-	       int target=1*numberColumns;
-               for (int i = 0; i < numberInRowArray; i++) {
-                 int iRow = whichRow[i];
-		 numberCovered += startPositive[iRow+1] - startPositive[iRow];
-		 if (numberCovered>target) {
-		   sparse=false;
-		   break;
-		 }
-	       }
                numberNonZero = 0;
-	       if (sparse) {
-                 // and set up mark as char array
-                 char * COIN_RESTRICT marked = reinterpret_cast<char *> (index + columnArray->capacity());
-                 double * COIN_RESTRICT array2 = y->denseVector();
+               // and set up mark as char array
+               char * marked = reinterpret_cast<char *> (index + columnArray->capacity());
+               double * array2 = y->denseVector();
 #ifdef CLP_DEBUG
-                 int numberColumns = model->numberColumns();
-                 for (int i = 0; i < numberColumns; i++) {
+               int numberColumns = model->numberColumns();
+               for (i = 0; i < numberColumns; i++) {
                     assert(!marked[i]);
                     assert(!array2[i]);
-                 }
+               }
 #endif
-#ifdef CLP_PLUS_ONE_MATRIX
-                 if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
-                   for (int i = 0; i < numberInRowArray; i++) {
-                     iRow = whichRow[i];
-		     double value = pi[i] * scalar;
-		     CoinBigIndex j;
-		     for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
+               for (i = 0; i < numberInRowArray; i++) {
+                    iRow = whichRow[i];
+                    double value = pi[i] * scalar;
+                    CoinBigIndex j;
+                    for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
                          int iColumn = column[j];
                          if (!marked[iColumn]) {
                               marked[iColumn] = 1;
                               index[numberNonZero++] = iColumn;
                          }
                          array2[iColumn] += value;
-                      }
-                      for (j = startNegative[iRow]; j < startPositive[iRow+1]; j++) {
+                    }
+                    for (j = startNegative[iRow]; j < startPositive[iRow+1]; j++) {
                          int iColumn = column[j];
                          if (!marked[iColumn]) {
                               marked[iColumn] = 1;
                               index[numberNonZero++] = iColumn;
                          }
                          array2[iColumn] -= value;
-                      }
                     }
-#ifdef CLP_PLUS_ONE_MATRIX
-                 } else {
-                    // plus one
-                    oneit(4);
-                   for (int i = 0; i < numberInRowArray; i++) {
-                     iRow = whichRow[i];
-		     double value = pi[i] * scalar;
-		     CoinBigIndex j;
-		     for (j = startPositive[iRow]; j < startPositive[iRow+1]; j++) {
-                         int iColumn = column[j];
-                         if (!marked[iColumn]) {
-                              marked[iColumn] = 1;
-                              index[numberNonZero++] = iColumn;
-                         }
-                         array2[iColumn] += value;
-                      }
-                    }
-                }
-#endif
-                // get rid of tiny values and zero out marked
-                 numberOriginal = numberNonZero;
-                 numberNonZero = 0;
-                 for (int i = 0; i < numberOriginal; i++) {
+               }
+               // get rid of tiny values and zero out marked
+               numberOriginal = numberNonZero;
+               numberNonZero = 0;
+               for (i = 0; i < numberOriginal; i++) {
                     int iColumn = index[i];
                     if (marked[iColumn]) {
                          double value = array2[iColumn];
@@ -785,81 +664,36 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
                               index[numberNonZero++] = iColumn;
                          }
                     }
-                 }
-               } else {
-                 // not sparse
-#ifdef CLP_PLUS_ONE_MATRIX
-                 if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
-                   for (int i = 0; i < numberInRowArray; i++) {
-                     iRow = whichRow[i];
-		     double value = pi[i] * scalar;
-		     CoinBigIndex j;
-		     for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
-                         int iColumn = column[j];
-                         array[iColumn] += value;
-                     }
-		     for (j = startNegative[iRow]; j < startPositive[iRow+1]; j++) {
-                         int iColumn = column[j];
-                         array[iColumn] -= value;
-                     }
-                   }
-#ifdef CLP_PLUS_ONE_MATRIX
-                } else {
-                  // plus one
-                  oneit(5);
-                   for (int i = 0; i < numberInRowArray; i++) {
-                     iRow = whichRow[i];
-		     double value = pi[i] * scalar;
-		     CoinBigIndex j;
-		     for (j = startPositive[iRow]; j < startPositive[iRow+1]; j++) {
-                         int iColumn = column[j];
-                         array[iColumn] += value;
-                     }
-                   }
-                 }
-#endif
-		 // get rid of tiny values and count
-		 for (int i = 0; i < numberColumns; i++) {
-		   double value = array[i];
-		   if (value) {
-		     array[i] = 0.0;
-		     if (fabs(value) > zeroTolerance) {
-		       array[numberNonZero] = value;
-		       index[numberNonZero++] = i;
-		     }
-		   }
-		 }
-	       }
+               }
           } else {
                numberNonZero = 0;
                // and set up mark as char array
-               char * COIN_RESTRICT marked = reinterpret_cast<char *> (markVector);
+               char * marked = reinterpret_cast<char *> (markVector);
                for (i = 0; i < numberOriginal; i++) {
                     int iColumn = index[i];
                     marked[iColumn] = 0;
                }
                for (i = 0; i < numberInRowArray; i++) {
-		 iRow = whichRow[i];
-		 double value = pi[iRow] * scalar;
-		 CoinBigIndex j;
-		 for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
-		   int iColumn = column[j];
-		   if (!marked[iColumn]) {
-		     marked[iColumn] = 1;
-		     index[numberNonZero++] = iColumn;
-		   }
-		   array[iColumn] += value;
-		 }
-		 for (j = startNegative[iRow]; j < startPositive[iRow+1]; j++) {
-		   int iColumn = column[j];
-		   if (!marked[iColumn]) {
-		     marked[iColumn] = 1;
-		     index[numberNonZero++] = iColumn;
-		   }
-		   array[iColumn] -= value;
-		 }
-	       }
+                    iRow = whichRow[i];
+                    double value = pi[iRow] * scalar;
+                    CoinBigIndex j;
+                    for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
+                         int iColumn = column[j];
+                         if (!marked[iColumn]) {
+                              marked[iColumn] = 1;
+                              index[numberNonZero++] = iColumn;
+                         }
+                         array[iColumn] += value;
+                    }
+                    for (j = startNegative[iRow]; j < startPositive[iRow+1]; j++) {
+                         int iColumn = column[j];
+                         if (!marked[iColumn]) {
+                              marked[iColumn] = 1;
+                              index[numberNonZero++] = iColumn;
+                         }
+                         array[iColumn] -= value;
+                    }
+               }
                // get rid of tiny values and zero out marked
                numberOriginal = numberNonZero;
                numberNonZero = 0;
@@ -891,30 +725,26 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
                     pi1 = pi[0];
                }
                // and set up mark as char array
-               char * COIN_RESTRICT marked = reinterpret_cast<char *> (index + columnArray->capacity());
-               int * COIN_RESTRICT lookup = y->getIndices();
+               char * marked = reinterpret_cast<char *> (index + columnArray->capacity());
+               int * lookup = y->getIndices();
                double value = pi0 * scalar;
-	       int numberOriginal;
-#ifdef CLP_PLUS_ONE_MATRIX
-	       if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
-		 for (j = startPositive[iRow0]; j < startNegative[iRow0]; j++) {
+               for (j = startPositive[iRow0]; j < startNegative[iRow0]; j++) {
                     int iColumn = column[j];
                     array[numberNonZero] = value;
                     marked[iColumn] = 1;
                     lookup[iColumn] = numberNonZero;
                     index[numberNonZero++] = iColumn;
-		 }
-		 for (j = startNegative[iRow0]; j < startPositive[iRow0+1]; j++) {
+               }
+               for (j = startNegative[iRow0]; j < startPositive[iRow0+1]; j++) {
                     int iColumn = column[j];
                     array[numberNonZero] = -value;
                     marked[iColumn] = 1;
                     lookup[iColumn] = numberNonZero;
                     index[numberNonZero++] = iColumn;
-		 }
-		 numberOriginal = numberNonZero;
-		 value = pi1 * scalar;
-		 for (j = startPositive[iRow1]; j < startNegative[iRow1]; j++) {
+               }
+               int numberOriginal = numberNonZero;
+               value = pi1 * scalar;
+               for (j = startPositive[iRow1]; j < startNegative[iRow1]; j++) {
                     int iColumn = column[j];
                     if (marked[iColumn]) {
                          int iLookup = lookup[iColumn];
@@ -925,8 +755,8 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
                               index[numberNonZero++] = iColumn;
                          }
                     }
-		 }
-		 for (j = startNegative[iRow1]; j < startPositive[iRow1+1]; j++) {
+               }
+               for (j = startNegative[iRow1]; j < startPositive[iRow1+1]; j++) {
                     int iColumn = column[j];
                     if (marked[iColumn]) {
                          int iLookup = lookup[iColumn];
@@ -937,34 +767,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
                               index[numberNonZero++] = iColumn;
                          }
                     }
-		 }
-#ifdef CLP_PLUS_ONE_MATRIX
-	       } else {
-		 // plus one
-		 oneit(7);
-		 for (j = startPositive[iRow0]; j < startPositive[iRow0+1]; j++) {
-                    int iColumn = column[j];
-                    array[numberNonZero] = value;
-                    marked[iColumn] = 1;
-                    lookup[iColumn] = numberNonZero;
-                    index[numberNonZero++] = iColumn;
-		 }
-		 numberOriginal = numberNonZero;
-		 value = pi1 * scalar;
-		 for (j = startPositive[iRow1]; j < startPositive[iRow1+1]; j++) {
-                    int iColumn = column[j];
-                    if (marked[iColumn]) {
-                         int iLookup = lookup[iColumn];
-                         array[iLookup] += value;
-                    } else {
-                         if (fabs(value) > zeroTolerance) {
-                              array[numberNonZero] = value;
-                              index[numberNonZero++] = iColumn;
-                         }
-                    }
-		 }
-	       }
-#endif
+               }
                // get rid of tiny values and zero out marked
                int nDelete = 0;
                for (j = 0; j < numberOriginal; j++) {
@@ -999,39 +802,39 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
                double value;
                value = pi[iRow0] * scalar;
                CoinBigIndex j;
-	       for (j = startPositive[iRow0]; j < startNegative[iRow0]; j++) {
-		 int iColumn = column[j];
-		 index[numberNonZero++] = iColumn;
-		 array[iColumn] = value;
-	       }
-	       for (j = startNegative[iRow0]; j < startPositive[iRow0+1]; j++) {
-		 int iColumn = column[j];
-		 index[numberNonZero++] = iColumn;
-		 array[iColumn] = -value;
-	       }
-	       value = pi[iRow1] * scalar;
-	       for (j = startPositive[iRow1]; j < startNegative[iRow1]; j++) {
-		 int iColumn = column[j];
-		 double value2 = array[iColumn];
-		 if (value2) {
-		   value2 += value;
-		 } else {
-		   value2 = value;
-		   index[numberNonZero++] = iColumn;
-		 }
-		 array[iColumn] = value2;
-	       }
-	       for (j = startNegative[iRow1]; j < startPositive[iRow1+1]; j++) {
-		 int iColumn = column[j];
-		 double value2 = array[iColumn];
-		 if (value2) {
-		   value2 -= value;
-		 } else {
-		   value2 = -value;
-		   index[numberNonZero++] = iColumn;
-		 }
-		 array[iColumn] = value2;
-	       }
+               for (j = startPositive[iRow0]; j < startNegative[iRow0]; j++) {
+                    int iColumn = column[j];
+                    index[numberNonZero++] = iColumn;
+                    array[iColumn] = value;
+               }
+               for (j = startNegative[iRow0]; j < startPositive[iRow0+1]; j++) {
+                    int iColumn = column[j];
+                    index[numberNonZero++] = iColumn;
+                    array[iColumn] = -value;
+               }
+               value = pi[iRow1] * scalar;
+               for (j = startPositive[iRow1]; j < startNegative[iRow1]; j++) {
+                    int iColumn = column[j];
+                    double value2 = array[iColumn];
+                    if (value2) {
+                         value2 += value;
+                    } else {
+                         value2 = value;
+                         index[numberNonZero++] = iColumn;
+                    }
+                    array[iColumn] = value2;
+               }
+               for (j = startNegative[iRow1]; j < startPositive[iRow1+1]; j++) {
+                    int iColumn = column[j];
+                    double value2 = array[iColumn];
+                    if (value2) {
+                         value2 -= value;
+                    } else {
+                         value2 = -value;
+                         index[numberNonZero++] = iColumn;
+                    }
+                    array[iColumn] = value2;
+               }
                // get rid of tiny values and zero out marked
                numberOriginal = numberNonZero;
                numberNonZero = 0;
@@ -1054,9 +857,6 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
           if (packed) {
                value = pi[0] * scalar;
                if (fabs(value) > zeroTolerance) {
-#ifdef CLP_PLUS_ONE_MATRIX
-                 if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
                     for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
                          int iColumn = column[j];
                          array[numberNonZero] = value;
@@ -1067,22 +867,11 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
                          array[numberNonZero] = -value;
                          index[numberNonZero++] = iColumn;
                     }
-#ifdef CLP_PLUS_ONE_MATRIX
-		 } else {
-		   // plus one
-		   oneit(9);
-                    for (j = startPositive[iRow]; j < startPositive[iRow+1]; j++) {
-                         int iColumn = column[j];
-                         array[numberNonZero] = value;
-                         index[numberNonZero++] = iColumn;
-                    }
-		 }
-#endif
                }
           } else {
                value = pi[iRow] * scalar;
                if (fabs(value) > zeroTolerance) {
-                  for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
+                    for (j = startPositive[iRow]; j < startNegative[iRow]; j++) {
                          int iColumn = column[j];
                          array[iColumn] = value;
                          index[numberNonZero++] = iColumn;
@@ -1109,17 +898,14 @@ ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * ,
           CoinIndexedVector * columnArray) const
 {
      columnArray->clear();
-     double * COIN_RESTRICT pi = rowArray->denseVector();
-     double * COIN_RESTRICT array = columnArray->denseVector();
+     double * pi = rowArray->denseVector();
+     double * array = columnArray->denseVector();
      int jColumn;
      int numberToDo = y->getNumElements();
-     const int * COIN_RESTRICT which = y->getIndices();
+     const int * which = y->getIndices();
      assert (!rowArray->packedMode());
      columnArray->setPacked();
-#ifdef CLP_PLUS_ONE_MATRIX
-     if ((otherFlags_&1)==0||!doPlusOnes) {
-#endif
-       for (jColumn = 0; jColumn < numberToDo; jColumn++) {
+     for (jColumn = 0; jColumn < numberToDo; jColumn++) {
           int iColumn = which[jColumn];
           double value = 0.0;
           CoinBigIndex j = startPositive_[iColumn];
@@ -1132,23 +918,7 @@ ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * ,
                value -= pi[iRow];
           }
           array[jColumn] = value;
-       }
-#ifdef CLP_PLUS_ONE_MATRIX
-     } else {
-       // plus one
-       oneit(11);
-       for (jColumn = 0; jColumn < numberToDo; jColumn++) {
-          int iColumn = which[jColumn];
-          double value = 0.0;
-          CoinBigIndex j = startPositive_[iColumn];
-          for (; j < startPositive_[iColumn+1]; j++) {
-               int iRow = indices_[j];
-               value += pi[iRow];
-          }
-          array[jColumn] = value;
-       }
      }
-#endif
 }
 /// returns number of elements in column part of basis,
 CoinBigIndex
@@ -1219,8 +989,8 @@ ClpPlusMinusOneMatrix::unpackPacked(ClpSimplex * ,
                                     CoinIndexedVector * rowArray,
                                     int iColumn) const
 {
-     int * COIN_RESTRICT index = rowArray->getIndices();
-     double * COIN_RESTRICT array = rowArray->denseVector();
+     int * index = rowArray->getIndices();
+     double * array = rowArray->denseVector();
      int number = 0;
      CoinBigIndex j = startPositive_[iColumn];
      for (; j < startNegative_[iColumn]; j++) {
@@ -1478,9 +1248,6 @@ ClpPlusMinusOneMatrix::passInCopy(int numberRows, int numberColumns,
                                   CoinBigIndex * startPositive, CoinBigIndex * startNegative)
 {
      columnOrdered_ = columnOrdered;
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 0;
-#endif
      startPositive_ = startPositive;
      startNegative_ = startNegative;
      indices_ = indices;
@@ -1499,19 +1266,11 @@ ClpPlusMinusOneMatrix::checkValid(bool detail) const
      int numberElements = getNumElements();
      CoinBigIndex last = -1;
      int bad = 0;
-     // say if all +1
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 1;
-#endif
      for (int i = 0; i < number; i++) {
           if(startPositive_[i] < last)
                bad++;
           else
                last = startPositive_[i];
-#ifdef CLP_PLUS_ONE_MATRIX
-	  if (startNegative_[i] < startPositive_[i+1])
-	    otherFlags_ &= ~1; // not all +1
-#endif
           if(startNegative_[i] < last)
                bad++;
           else
@@ -1564,10 +1323,6 @@ ClpPlusMinusOneMatrix::appendCols(int number, const CoinPackedVectorBase * const
      int iColumn;
      CoinBigIndex size = 0;
      int numberBad = 0;
-     // say if all +1
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 0;
-#endif
      for (iColumn = 0; iColumn < number; iColumn++) {
           int n = columns[iColumn]->getNumElements();
           const double * element = columns[iColumn]->getElements();
@@ -1632,10 +1387,6 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
      int iRow;
      CoinBigIndex size = 0;
      int numberBad = 0;
-     // say if all +1
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 0;
-#endif
      for (iRow = 0; iRow < number; iRow++) {
           int n = rows[iRow]->getNumElements();
           const int * column = rows[iRow]->getIndices();
@@ -1672,14 +1423,14 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
           move = startNegative_[iColumn] - now;
           n = countPositive[iColumn];
           startPositive_[iColumn] += numberAdded;
-          CoinMemcpyN(indices_+now, move, newIndices + startPositive_[iColumn]);
+          CoinMemcpyN(newIndices + startPositive_[iColumn], move, indices_ + now);
           countPositive[iColumn] = startNegative_[iColumn] + numberAdded;
           numberAdded += n;
           now = startNegative_[iColumn];
           move = startPositive_[iColumn+1] - now;
           n = countNegative[iColumn];
           startNegative_[iColumn] += numberAdded;
-          CoinMemcpyN(indices_+now, move, newIndices + startNegative_[iColumn]);
+          CoinMemcpyN(newIndices + startNegative_[iColumn], move, indices_ + now);
           countNegative[iColumn] = startPositive_[iColumn+1] + numberAdded;
           numberAdded += n;
      }
@@ -1757,9 +1508,9 @@ ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, double startFraction, 
      int end = CoinMin(static_cast<int> (endFraction * numberColumns_ + 1), numberColumns_);
      CoinBigIndex j;
      double tolerance = model->currentDualTolerance();
-     double * COIN_RESTRICT reducedCost = model->djRegion();
-     const double * COIN_RESTRICT duals = model->dualRowSolution();
-     const double * COIN_RESTRICT cost = model->costRegion();
+     double * reducedCost = model->djRegion();
+     const double * duals = model->dualRowSolution();
+     const double * cost = model->costRegion();
      double bestDj;
      if (bestSequence >= 0)
           bestDj = fabs(reducedCost[bestSequence]);
@@ -1889,10 +1640,6 @@ ClpPlusMinusOneMatrix::releasePackedMatrix() const
      delete [] lengths_;
      matrix_ = NULL;
      lengths_ = NULL;
-     // say if all +1
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 0;
-#endif
 }
 /* Returns true if can combine transposeTimes and subsetTransposeTimes
    and if it would be faster */
@@ -1933,21 +1680,21 @@ ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
                                        CoinIndexedVector * spare,
                                        double referenceIn, double devex,
                                        // Array for exact devex to say what is in reference framework
-                                       unsigned int * COIN_RESTRICT reference,
-                                       double * COIN_RESTRICT weights, double scaleFactor)
+                                       unsigned int * reference,
+                                       double * weights, double scaleFactor)
 {
      // put row of tableau in dj1
-     double * COIN_RESTRICT pi = pi1->denseVector();
+     double * pi = pi1->denseVector();
      int numberNonZero = 0;
-     int * COIN_RESTRICT index = dj1->getIndices();
-     double * COIN_RESTRICT array = dj1->denseVector();
+     int * index = dj1->getIndices();
+     double * array = dj1->denseVector();
      int numberInRowArray = pi1->getNumElements();
      double zeroTolerance = model->zeroTolerance();
      bool packed = pi1->packedMode();
      // do by column
      int iColumn;
      assert (!spare->getNumElements());
-     double * COIN_RESTRICT piWeight = pi2->denseVector();
+     double * piWeight = pi2->denseVector();
      assert (!pi2->packedMode());
      bool killDjs = (scaleFactor == 0.0);
      if (!scaleFactor)
@@ -1956,9 +1703,9 @@ ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
      if (packed) {
           // need to expand pi into y
           assert(spare->capacity() >= model->numberRows());
-          double * COIN_RESTRICT piOld = pi;
+          double * piOld = pi;
           pi = spare->denseVector();
-          const int * COIN_RESTRICT whichRow = pi1->getIndices();
+          const int * whichRow = pi1->getIndices();
           int i;
           // modify pi so can collapse to one loop
           for (i = 0; i < numberInRowArray; i++) {
@@ -2078,15 +1825,15 @@ ClpPlusMinusOneMatrix::subsetTimes2(const ClpSimplex * ,
                                     const CoinIndexedVector * pi2, CoinIndexedVector *,
                                     double referenceIn, double devex,
                                     // Array for exact devex to say what is in reference framework
-                                    unsigned int * COIN_RESTRICT reference,
-                                    double * COIN_RESTRICT weights, double scaleFactor)
+                                    unsigned int * reference,
+                                    double * weights, double scaleFactor)
 {
      int number = dj1->getNumElements();
-     const int * COIN_RESTRICT index = dj1->getIndices();
-     double * COIN_RESTRICT array = dj1->denseVector();
+     const int * index = dj1->getIndices();
+     double * array = dj1->denseVector();
      assert( dj1->packedMode());
 
-     double * COIN_RESTRICT piWeight = pi2->denseVector();
+     double * piWeight = pi2->denseVector();
      bool killDjs = (scaleFactor == 0.0);
      if (!scaleFactor)
           scaleFactor = 1.0;
@@ -2185,10 +1932,6 @@ ClpPlusMinusOneMatrix::appendMatrix(int number, int type,
                                     const double * element, int /*numberOther*/)
 {
      int numberErrors = 0;
-     // say if all +1
-#ifdef CLP_PLUS_ONE_MATRIX
-     otherFlags_ = 0;
-#endif
      // make into CoinPackedVector
      CoinPackedVectorBase ** vectors =
           new CoinPackedVectorBase * [number];

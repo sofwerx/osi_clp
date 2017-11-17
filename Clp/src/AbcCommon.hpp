@@ -1,4 +1,4 @@
-/* $Id: AbcCommon.hpp 2074 2014-12-10 09:43:54Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -37,9 +37,6 @@
 #endif
 #ifndef ABC_INHERIT
 #define ABC_INHERIT
-#ifndef CLP_INHERIT_MODE
-#define CLP_INHERIT_MODE 2
-#endif
 #endif
 #elif CLP_HAS_ABC==3
 #ifndef ABC_PARALLEL

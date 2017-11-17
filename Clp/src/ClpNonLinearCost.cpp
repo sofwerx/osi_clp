@@ -1,4 +1,4 @@
-/* $Id: ClpNonLinearCost.cpp 2030 2014-04-15 15:54:11Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -224,7 +224,6 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model, int method)
           }
      }
 }
-#if 0
 // Refresh - assuming regions OK
 void 
 ClpNonLinearCost::refresh()
@@ -277,7 +276,6 @@ ClpNonLinearCost::refresh()
      //     checkInfeasibilities(model_->primalTolerance());
      
 }
-#endif
 // Refreshes costs always makes row costs zero
 void
 ClpNonLinearCost::refreshCosts(const double * columnCosts)
@@ -1032,7 +1030,6 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
                     }
                     lower[iSequence] = lowerValue;
                     upper[iSequence] = upperValue;
-		    assert (lowerValue<=upperValue);
                }
                // always do as other things may change
                cost[iSequence] = costValue;

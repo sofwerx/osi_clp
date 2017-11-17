@@ -1,4 +1,4 @@
-/* $Id: ClpSimplex.hpp 2114 2015-02-10 12:12:46Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -28,21 +28,6 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
-/*
-  May want to use Clp defaults so that with ABC defined but not used
-  it behaves as Clp (and ABC used will be different than if not defined)
- */
-#ifdef ABC_INHERIT
-#ifndef CLP_INHERIT_MODE
-#define CLP_INHERIT_MODE 1
-#endif
-#ifndef ABC_CLP_DEFAULTS
-#define ABC_CLP_DEFAULTS 0
-#endif
-#else
-#undef ABC_CLP_DEFAULTS
-#define ABC_CLP_DEFAULTS 1
-#endif
 #ifdef CLP_HAS_ABC
 #include "AbcCommon.hpp"
 class AbcTolerancesEtc;
@@ -267,7 +252,7 @@ public:
      int initialDualSolve();
      /// Primal initial solve
      int initialPrimalSolve();
-     /// Barrier initial solve
+/// Barrier initial solve
      int initialBarrierSolve();
      /// Barrier initial solve, not to be followed by crossover
      int initialBarrierNoCrossSolve();
@@ -320,10 +305,8 @@ public:
   /** solvetype 0 for dual, 1 for primal
       startup 1 for values pass
       interrupt whether to pass across interrupt handler
-      add 10 to return AbcSimplex 
   */
-  AbcSimplex * dealWithAbc(int solveType,int startUp,bool interrupt=false);
-  //void dealWithAbc(int solveType,int startUp,bool interrupt=false);
+  void dealWithAbc(int solveType,int startUp,bool interrupt=false);
 #endif
      /** This loads a model from a CoinStructuredModel object - returns number of errors.
          If originalOrder then keep to order stored in blocks,
@@ -437,8 +420,6 @@ public:
      ClpSimplex * miniPresolve(char * rowType, char * columnType,void ** info);
      /// After mini presolve
      void miniPostsolve(const ClpSimplex * presolvedModel,void * info);
-     /// mini presolve and solve
-     void miniSolve(char * rowType, char *columnType,int algorithm, int startUp);
      /** Write the basis in MPS format to the specified file.
          If writeValues true writes values of structurals
          (and adds VALUES to end of NAME card)
@@ -498,12 +479,6 @@ public:
      void setDualRowPivotAlgorithm(ClpDualRowPivot & choice);
      /// Sets column pivot choice algorithm in primal
      void setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice);
-     /// Create a hotstart point of the optimization process
-     void markHotStart(void * & saveStuff);
-     /// Optimize starting from the hotstart
-     void solveFromHotStart(void * saveStuff);
-     /// Delete the snapshot
-     void unmarkHotStart(void * saveStuff);
      /** For strong branching.  On input lower and upper are new bounds
          while on output they are change in objective function values
          (>1.0e50 infeasible).
@@ -841,9 +816,9 @@ protected:
      */
      double scaleObjective(double value);
      /// Solve using Dantzig-Wolfe decomposition and maybe in parallel
-    int solveDW(CoinStructuredModel * model, ClpSolve & options);
+     int solveDW(CoinStructuredModel * model);
      /// Solve using Benders decomposition and maybe in parallel
-     int solveBenders(CoinStructuredModel * model, ClpSolve & options);
+     int solveBenders(CoinStructuredModel * model);
 public:
      /** For advanced use.  When doing iterative solves things can get
          nasty so on values pass if incoming solution has largest
@@ -1207,10 +1182,8 @@ public:
 	 4096 bit - try more for complete fathoming
 	 8192 bit - don't even think of using primal if user asks for dual (and vv)
 	 16384 bit - in initialSolve so be more flexible
-	 32768 bit - don't swap algorithms from dual if small infeasibility
-	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
-	 131072 bit (*3) initial stateDualColumn
-	 524288 bit - stop when primal feasible
+	 debug
+	 32768 bit - do dual in netlibd
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1233,12 +1206,7 @@ public:
 	 16384 bit - in initialSolve so be more flexible
 	 32768 bit - don't swap algorithms from dual if small infeasibility
 	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
-	 131072 bit (*3) initial stateDualColumn
-	 524288 bit - stop when primal feasible
 	 1048576 bit - don't perturb even if long time
-	 2097152 bit - no primal in fastDual2 if feasible
-	 4194304 bit - tolerances have been changed by code
-	 8388608 bit - tolerances are dynamic (at first)
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
@@ -1296,16 +1264,6 @@ public:
      }
      inline bool active(int iRow) const {
           return ((status_[iRow] & 128) != 0);
-     }
-     /// To say perturbed 
-     inline void setPerturbed( int iSequence) {
-          status_[iSequence] = static_cast<unsigned char>(status_[iSequence] | 128);
-     }
-     inline void clearPerturbed( int iSequence) {
-          status_[iSequence] = static_cast<unsigned char>(status_[iSequence] & ~128);
-     }
-     inline bool perturbed(int iSequence) const {
-          return ((status_[iSequence] & 128) != 0);
      }
      /** Set up status array (can be used by OsiClp).
          Also can be used to set up all slack basis */
@@ -1557,11 +1515,6 @@ protected:
      double sumOfRelaxedPrimalInfeasibilities_;
      /// Acceptable pivot value just after factorization
      double acceptablePivot_;
-     /// Minimum primal tolerance
-     double minimumPrimalTolerance_;
-     /// Last few infeasibilities
-#define CLP_INFEAS_SAVE 5
-     double averageInfeasibility_[CLP_INFEAS_SAVE];
      /// Working copy of lower bounds (Owner of arrays below)
      double * lower_;
      /// Row lower bounds - working copy
@@ -1703,8 +1656,6 @@ protected:
 #endif
 #define CLP_ABC_BEEN_FEASIBLE 65536
   int abcState_;
-  /// Number of degenerate pivots since last perturbed
-  int numberDegeneratePivots_;
 public:
      /// Spare int array for passing information [0]!=0 switches on
      mutable int spareIntArray_[4];
@@ -1713,8 +1664,6 @@ public:
 protected:
      /// Allow OsiClp certain perks
      friend class OsiClpSolverInterface;
-     /// And OsiCLP
-     friend class OsiCLPSolverInterface;
      //@}
 };
 //#############################################################################
@@ -1732,66 +1681,4 @@ ClpSimplexUnitTest(const std::string & mpsDir);
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0
-#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
-// Use pthreads
-#include <pthread.h>
-typedef struct {
-  double result;
-  //const CoinIndexedVector * constVector; // can get rid of
-  //CoinIndexedVector * vectors[2]; // can get rid of
-  void * extraInfo;
-  void * extraInfo2;
-  int status;
-  int stuff[4];
-} CoinThreadInfo;
-class CoinPthreadStuff {
-public:
-  /**@name Constructors and destructor and copy */
-  //@{
-  /** Main constructor
-  */
-  CoinPthreadStuff (int numberThreads=0,
-		    void * parallelManager(void * stuff)=NULL);
-  /// Assignment operator. This copies the data
-  CoinPthreadStuff & operator=(const CoinPthreadStuff & rhs);
-  /// Destructor
-  ~CoinPthreadStuff (  );
-  /// set stop start
-  inline void setStopStart(int value)
-  { stopStart_=value;}
-#ifndef NUMBER_THREADS 
-#define NUMBER_THREADS 8
-#endif
-  // For waking up thread
-  inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
-  { return mutex_+which+3*thread;}
-#ifdef PTHREAD_BARRIER_SERIAL_THREAD
-  inline pthread_barrier_t * barrierPointer() 
-  { return &barrier_;}
-#endif
-  inline int whichLocked(int thread=0) const
-  { return locked_[thread];}
-  inline CoinThreadInfo * threadInfoPointer(int thread=0) 
-  { return threadInfo_+thread;}
-  void startParallelTask(int type,int iThread,void * info=NULL);
-  int waitParallelTask(int type, int & iThread,bool allowIdle);
-  void waitAllTasks();
-  /// so thread can find out which one it is 
-  int whichThread() const;
-  void sayIdle(int iThread);
-  //void startThreads(int numberThreads);
-  //void stopThreads();
-  // For waking up thread
-  pthread_mutex_t mutex_[3*(NUMBER_THREADS+1)];
-#ifdef PTHREAD_BARRIER_SERIAL_THREAD
-  pthread_barrier_t barrier_; 
-#endif
-  CoinThreadInfo threadInfo_[NUMBER_THREADS+1];
-  pthread_t abcThread_[NUMBER_THREADS+1];
-  int locked_[NUMBER_THREADS+1];
-  int stopStart_;
-  int numberThreads_;
-};
-void * clp_parallelManager(void * stuff);
-#endif
 #endif

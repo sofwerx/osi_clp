@@ -1,4 +1,4 @@
-/* $Id: ClpPlusMinusOneMatrix.hpp 2078 2015-01-05 12:39:49Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -266,21 +266,15 @@ protected:
      mutable CoinPackedMatrix * matrix_;
      mutable int * lengths_;
      /// Start of +1's for each
-     CoinBigIndex * COIN_RESTRICT startPositive_;
+     CoinBigIndex * startPositive_;
      /// Start of -1's for each
-     CoinBigIndex * COIN_RESTRICT startNegative_;
+     CoinBigIndex * startNegative_;
      /// Data -1, then +1 rows in pairs (row==-1 if one entry)
-     int * COIN_RESTRICT indices_;
+     int * indices_;
      /// Number of rows
      int numberRows_;
      /// Number of columns
      int numberColumns_;
-#ifdef CLP_PLUS_ONE_MATRIX
-     /** Other flags (could have columnOrdered_?)
-	 1 bit - says just +1
-     */
-     mutable int otherFlags_;
-#endif
      /// True if column ordered
      bool columnOrdered_;
 
